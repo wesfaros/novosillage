@@ -38,8 +38,28 @@
 * [x] **Reconexão Controlada**:
   * Tentativas limitadas a 5 vezes com backoff exponencial para evitar sobrecarga de rede.
 
-## 4. Conformidade Visual e Anti-Slop
+## 4. Testes da Caixa de Entrada / Inbox (Etapa 3)
+* [x] **Exibição Condicional da Caixa de Entrada**:
+  * Com linha conectada, a tela do WhatsApp abre automaticamente na Caixa de Entrada (`isInboxView`).
+  * Com zero linhas conectadas, exibe tela limpa para adicionar linha.
+* [x] **Lista de Conversas (`ChatList`)**:
+  * Listagem real de conversas da linha conectada.
+  * Filtro de busca por nome, número ou texto da última mensagem.
+  * Estado limpo quando a linha não possui conversas registradas ("Nenhuma conversa encontrada").
+  * Botão "Nova conversa" abre modal para contato direto por número telefônico.
+* [x] **Histórico de Mensagens (`MessageThread`)**:
+  * Carregamento do histórico de mensagens reais da conversa selecionada.
+  * Balões diferenciados com timestamps e indicadores de entrega (`CheckCheck`).
+  * Rolagem automática para o final ao abrir conversa ou receber nova mensagem.
+* [x] **Envio de Mensagens de Texto (`MessageInput`)**:
+  * Envio de mensagem pelo Baileys via endpoint `POST /api/whatsapp/lines/:lineId/chats/:chatJid/messages`.
+  * Suporte a atalho `Enter` para enviar e `Shift+Enter` para quebra de linha.
+  * Tratamento de erro com aviso visual caso a mensagem não possa ser enviada.
+* [x] **Atualização em Tempo Real via SSE**:
+  * Recebimento de mensagens em background atualiza `messages` e reordena `chats` instantaneamente.
+
+## 5. Conformidade Visual e Anti-Slop
 * [x] Sem sidebars ou navigation rails não autorizadas.
-* [x] Barra flutuante inferior centralizada (`FloatingBottomBar`) com 3 grupos lógicos.
+* [x] Barra flutuante inferior centralizada (`FloatingBottomBar`) mantida intacta.
 * [x] Tipografia Sora e Inter aplicadas.
-* [x] Zero gráficos falsos, zero conversas falsas, zero QR codes mockados.
+* [x] Zero gráficos falsos, zero conversas falsas, zero dados simulados.

@@ -27,3 +27,9 @@
 * **Contexto**: O cliente precisa reagir imediatamente à emissão do QR Code, leitura pelo aparelho, confirmação de conexão e quedas sem sobrecarregar o servidor com polling HTTP agressivo.
 * **Decisão**: Implementar endpoint SSE `/api/whatsapp/events` integrado a um EventEmitter centralizado no `WhatsAppConnectionManager`.
 * **Consequências**: Latência zero para atualização de estado na interface, reconexão transparente suportada nativamente pelo navegador e ausência de overhead de polling.
+
+## ADR 006: Ativação Direta da Caixa de Entrada (Inbox) sob Linha Conectada
+* **Status**: Aprovado e implementado na Etapa 3.
+* **Contexto**: Quando o operador possui uma linha real conectada, a visualização prioritária deve ser o atendimento (Inbox com chats e mensagens) e não a tela técnica de QR Code ou configuração de linhas.
+* **Decisão**: Alternar automaticamente a visualização do módulo WhatsApp para a Caixa de Entrada de 2 colunas (`ChatList` + `MessageThread`) quando houver ao menos uma linha com status `connected`. O operador pode alternar para a gestão de linhas a qualquer momento através do controle dedicado "Gerenciar Linhas".
+* **Consequências**: Experiência operacional focada em produtividade de vendas sem sacrificar a flexibilidade para gerenciar múltiplas linhas.

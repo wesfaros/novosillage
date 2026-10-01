@@ -1,4 +1,4 @@
-import { WhatsAppLine, WhatsAppServerEvent } from '../types/whatsapp';
+import { WhatsAppLine, WhatsAppServerEvent, WhatsAppChat, WhatsAppMessage } from '../types/whatsapp';
 
 export const whatsAppApi = {
   async fetchLines(): Promise<WhatsAppLine[]> {
@@ -61,6 +61,54 @@ export const whatsAppApi = {
     if (!res.ok) {
       throw new Error(`Erro ao excluir linha: ${res.statusText}`);
     }
+  },
+
+  async fetchChats(lineId: string): Promise<WhatsAppChat[]> {
+    const res = await fetch(`/api/whatsapp/lines/${lineId}/chats`);
+    if (!res.ok) {
+      throw new Error(`Erro ao buscar conversas: ${res.statusText}`);
+    }
+    const data = await res.json();
+    return data.data || [];
+  },
+
+  async fetchMessages(lineId: string, chatJid: string): Promise<WhatsAppMessage[]> {
+    const encodedJid = encodeURIComponent(chatJid);
+    const res = await fetch(`/api/whatsapp/lines/${lineId}/chats/${encodedJid}/messages`);
+    if (!res.ok) {
+      throw new Error(`Erro ao buscar mensagens: ${res.statusText}`);
+    }
+    const data = await res.json();
+    return data.data || [];
+  },
+
+  async sendMessage(lineId: string, chatJid: string, text: string): Promise<WhatsAppMessage> {
+    const encodedJid = encodeURIComponent(chatJid);
+    const res = await fetch(`/api/whatsapp/lines/${lineId}/chats/${encodedJid}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || `Erro ao enviar mensagem: ${res.statusText}`);
+    }
+    const data = await res.json();
+    return data.data;
+  },
+
+  async startChat(lineId: string, phoneOrJid: string, name?: string): Promise<WhatsAppChat> {
+    const res = await fetch(`/api/whatsapp/lines/${lineId}/chats`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phoneOrJid, name }),
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || `Erro ao iniciar conversa: ${res.statusText}`);
+    }
+    const data = await res.json();
+    return data.data;
   },
 
   subscribeToEvents(

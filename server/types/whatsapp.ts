@@ -28,9 +28,49 @@ export interface CreateWhatsAppLineDto {
   name: string;
 }
 
+export interface WhatsAppChat {
+  id: string; // remoteJid
+  lineId: string;
+  jid: string;
+  name: string;
+  isGroup: boolean;
+  unreadCount: number;
+  lastMessage?: {
+    text: string;
+    timestamp: string;
+    fromMe: boolean;
+  };
+  updatedAt: string;
+}
+
+export type WhatsAppMessageStatus = 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
+
+export interface WhatsAppMessage {
+  id: string; // message key ID
+  lineId: string;
+  chatJid: string;
+  fromMe: boolean;
+  senderName?: string;
+  text: string;
+  timestamp: string;
+  status: WhatsAppMessageStatus;
+}
+
+export interface SendMessageDto {
+  text: string;
+}
+
 export interface WhatsAppServerEvent {
-  type: 'line_created' | 'line_updated' | 'line_deleted' | 'qr_updated' | 'connection_state_changed';
+  type:
+    | 'connected_to_stream'
+    | 'line_created'
+    | 'line_updated'
+    | 'line_deleted'
+    | 'qr_updated'
+    | 'connection_state_changed'
+    | 'chat_upsert'
+    | 'message_upsert';
   lineId: string;
   timestamp: string;
-  payload: Partial<WhatsAppLine>;
+  payload: any;
 }

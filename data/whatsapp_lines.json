@@ -1,1 +1,15 @@
-[]
+[
+  {
+    "id": "line_1790897515336_q207f",
+    "name": "tESTE",
+    "accountId": "acc_1790897515336_4hs4g",
+    "status": "connected",
+    "createdAt": "2026-10-01T23:31:55.336Z",
+    "updatedAt": "2026-10-01T23:54:55.933Z",
+    "phoneNumber": "554398082633",
+    "jid": "554398082633:74@s.whatsapp.net",
+    "connectedAt": "2026-10-01T23:54:55.933Z",
+    "lastSeenAt": "2026-10-01T23:54:55.933Z",
+    "nameInWhatsApp": "Wesley Faria"
+  }
+]

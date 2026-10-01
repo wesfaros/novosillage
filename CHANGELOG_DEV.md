@@ -1,5 +1,31 @@
 # SILLÁGE — Changelog de Desenvolvimento
 
+## [0.3.0] - Etapa 3: Caixa de Entrada (Inbox) Operacional do WhatsApp
+
+### Adicionado
+- **Persistência de Conversas e Mensagens (`server/storage/whatsapp-storage.ts`)**:
+  - Armazenamento em disco das conversas (`data/chats_{lineId}.json`) e histórico de mensagens (`data/messages_{lineId}.json`).
+  - Ordenação automática por `updatedAt` decrescente para conversas e cronológica para mensagens.
+- **Manipulação de Mensagens no Baileys (`server/services/whatsapp-manager.ts`)**:
+  - Escuta em tempo real do evento `messages.upsert` com normalização de mensagens textuais e push de remetente.
+  - Escuta de sincronização inicial de histórico (`messaging-history.set`) e atualizações de chats (`chats.upsert`).
+  - Método `sendMessage` disparando mensagens reais de texto via Baileys com persistência e transmissão SSE (`message_upsert` e `chat_upsert`).
+- **Endpoints de Caixa de Entrada (`server/routes/whatsapp-routes.ts`)**:
+  - `GET /api/whatsapp/lines/:lineId/chats`: lista conversas reais da sessão conectada.
+  - `GET /api/whatsapp/lines/:lineId/chats/:chatJid/messages`: histórico de mensagens da conversa.
+  - `POST /api/whatsapp/lines/:lineId/chats/:chatJid/messages`: envio de nova mensagem de texto.
+  - `POST /api/whatsapp/lines/:lineId/chats`: abertura de nova conversa por número/JID.
+- **Hook Reativo de Caixa de Entrada (`src/hooks/useWhatsAppChat.ts`)**:
+  - Gestão de estado das conversas, conversa selecionada, mensagens e escuta SSE em tempo real.
+- **Componentes da Caixa de Entrada**:
+  - `ChatList.tsx`: Coluna esquerda com busca por contato/número, última mensagem e estado limpo quando não há conversas.
+  - `MessageThread.tsx`: Área principal com cabeçalho do contato, balões de mensagens com timestamps e confirmações de entrega.
+  - `MessageInput.tsx`: Compositor de mensagens com atalhos de teclado (Enter para envio, Shift+Enter para quebra) e bloqueio de envio duplo.
+  - `NewChatModal.tsx`: Modal para iniciar conversa direta digitando o telefone do contato.
+- **Integração na Tela do WhatsApp (`src/pages/WhatsAppPage.tsx`)**:
+  - Exibição automática da Caixa de Entrada quando há linha conectada.
+  - Alternância limpa para "Gerenciar Linhas" mantendo estado e contexto.
+
 ## [0.2.0] - Etapa 2: WhatsApp Core Real (Baileys Multi-File Auth & Gerenciamento de Linhas)
 
 ### Adicionado

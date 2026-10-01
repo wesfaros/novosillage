@@ -43,7 +43,8 @@ src/
 ├── services/
 │   └── whatsapp-api.ts     # Client HTTP e inscrição SSE para o backend
 ├── hooks/
-│   └── useWhatsAppLines.ts # Hook reativo para gerenciamento de linhas e escuta SSE
+│   ├── useWhatsAppLines.ts # Hook reativo para gerenciamento de linhas e escuta SSE
+│   └── useWhatsAppChat.ts  # Hook reativo para conversas, histórico de mensagens e envio
 ├── components/
 │   ├── brand/
 │   │   └── SillageLogo.tsx # Logotipo e elemento visual do Silláge
@@ -56,10 +57,14 @@ src/
 │   └── whatsapp/
 │       ├── WhatsAppStatusBadge.tsx # Badge visual para os 8 estados da linha
 │       ├── WhatsAppLineCard.tsx    # Card operacional da linha com ações
-│       └── ConnectLineModal.tsx    # Modal com QR Code real, instruções e pareamento
+│       ├── ConnectLineModal.tsx    # Modal com QR Code real, instruções e pareamento
+│       ├── ChatList.tsx            # Lista de conversas com busca e indicador de mensagens
+│       ├── MessageThread.tsx       # Área principal com balões e histórico da conversa
+│       ├── MessageInput.tsx        # Compositor de mensagens de texto com atalhos
+│       └── NewChatModal.tsx        # Modal para abertura de chat direto por número
 ├── pages/
 │   ├── HomePage.tsx        # Tela inicial limpa com identidade e guia
-│   ├── WhatsAppPage.tsx    # Painel completo de Gerenciamento de Linhas WhatsApp
+│   ├── WhatsAppPage.tsx    # Caixa de Entrada (Inbox) integrada + Gestão de Linhas
 │   ├── EmailPage.tsx       # Placeholder limpo do canal E-mail
 │   ├── CampanhasPage.tsx   # Placeholder limpo de Campanhas
 │   ├── CarteiraPage.tsx    # Placeholder limpo do CRM/Carteira

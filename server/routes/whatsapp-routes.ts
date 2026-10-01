@@ -74,6 +74,66 @@ whatsAppRouter.delete('/lines/:id', async (req: Request, res: Response) => {
   }
 });
 
+// GET chats for line
+whatsAppRouter.get('/lines/:lineId/chats', (req: Request, res: Response) => {
+  try {
+    const chats = whatsAppManager.getChats(req.params.lineId);
+    res.json({ success: true, data: chats });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// GET messages for chat
+whatsAppRouter.get('/lines/:lineId/chats/:chatJid/messages', (req: Request, res: Response) => {
+  try {
+    const messages = whatsAppManager.getMessages(req.params.lineId, req.params.chatJid);
+    res.json({ success: true, data: messages });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST send message in chat
+whatsAppRouter.post('/lines/:lineId/chats/:chatJid/messages', async (req: Request, res: Response) => {
+  try {
+    const { text } = req.body || {};
+    if (!text || typeof text !== 'string' || !text.trim()) {
+      return res.status(400).json({ success: false, error: 'Texto da mensagem é obrigatório.' });
+    }
+    const message = await whatsAppManager.sendMessage(req.params.lineId, req.params.chatJid, text);
+    res.status(201).json({ success: true, data: message });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST start new chat by phone number
+whatsAppRouter.post('/lines/:lineId/chats', async (req: Request, res: Response) => {
+  try {
+    const { phoneOrJid, name } = req.body || {};
+    if (!phoneOrJid || typeof phoneOrJid !== 'string') {
+      return res.status(400).json({ success: false, error: 'Telefone ou JID é obrigatório.' });
+    }
+    let jid = phoneOrJid.trim().replace(/[^0-9@.a-z_-]/gi, '');
+    if (!jid.includes('@')) {
+      jid = `${jid}@s.whatsapp.net`;
+    }
+    const chat = whatsAppManager.getChats(req.params.lineId).find((c) => c.jid === jid) || {
+      id: jid,
+      lineId: req.params.lineId,
+      jid,
+      name: name?.trim() || jid.split('@')[0],
+      isGroup: jid.endsWith('@g.us'),
+      unreadCount: 0,
+      updatedAt: new Date().toISOString(),
+    };
+    res.status(201).json({ success: true, data: chat });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // GET /api/whatsapp/events (SSE)
 whatsAppRouter.get('/events', (req: Request, res: Response) => {
   res.setHeader('Content-Type', 'text/event-stream');

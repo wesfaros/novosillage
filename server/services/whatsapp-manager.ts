@@ -23,7 +23,33 @@ const makeWASocket = (
 import QRCode from 'qrcode';
 import pino from 'pino';
 import { whatsAppStorage } from '../storage/whatsapp-storage.js';
-import { WhatsAppLine, WhatsAppLineStatus, WhatsAppServerEvent } from '../types/whatsapp.js';
+import {
+  WhatsAppLine,
+  WhatsAppLineStatus,
+  WhatsAppServerEvent,
+  WhatsAppChat,
+  WhatsAppMessage,
+} from '../types/whatsapp.js';
+
+function extractMessageText(msgContent: any): string {
+  if (!msgContent) return '';
+  if (typeof msgContent.conversation === 'string' && msgContent.conversation) {
+    return msgContent.conversation;
+  }
+  if (msgContent.extendedTextMessage?.text) {
+    return msgContent.extendedTextMessage.text;
+  }
+  if (msgContent.imageMessage?.caption) {
+    return msgContent.imageMessage.caption;
+  }
+  if (msgContent.videoMessage?.caption) {
+    return msgContent.videoMessage.caption;
+  }
+  if (msgContent.documentMessage?.caption) {
+    return msgContent.documentMessage.caption;
+  }
+  return '';
+}
 
 interface ActiveLineSession {
   socket: WASocket;
@@ -181,6 +207,128 @@ export class WhatsAppConnectionManager extends EventEmitter {
       // Handle connection updates
       sock.ev.on('connection.update', async (update: Partial<ConnectionState>) => {
         await this.handleConnectionUpdate(lineId, update);
+      });
+
+      // Handle real-time incoming & outgoing messages
+      sock.ev.on('messages.upsert', async ({ messages }: any) => {
+        for (const msg of messages || []) {
+          const remoteJid = msg.key?.remoteJid;
+          if (!remoteJid || remoteJid === 'status@broadcast') continue;
+
+          const text = extractMessageText(msg.message);
+          if (!text && !msg.message) continue;
+
+          const timestamp = msg.messageTimestamp
+            ? new Date(Number(msg.messageTimestamp) * 1000).toISOString()
+            : new Date().toISOString();
+
+          const normalizedMsg: WhatsAppMessage = {
+            id: msg.key.id || `msg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+            lineId,
+            chatJid: remoteJid,
+            fromMe: !!msg.key.fromMe,
+            senderName: msg.pushName || undefined,
+            text: text || '(Mensagem)',
+            timestamp,
+            status: msg.key.fromMe ? 'sent' : 'delivered',
+          };
+
+          whatsAppStorage.saveMessage(lineId, normalizedMsg);
+
+          const updatedChat = whatsAppStorage.upsertChat(lineId, {
+            jid: remoteJid,
+            name: msg.pushName || remoteJid.split('@')[0],
+            lastMessage: {
+              text: normalizedMsg.text,
+              timestamp: normalizedMsg.timestamp,
+              fromMe: normalizedMsg.fromMe,
+            },
+            updatedAt: normalizedMsg.timestamp,
+          });
+
+          this.broadcastEvent({
+            type: 'message_upsert',
+            lineId,
+            timestamp: new Date().toISOString(),
+            payload: normalizedMsg,
+          });
+
+          this.broadcastEvent({
+            type: 'chat_upsert',
+            lineId,
+            timestamp: new Date().toISOString(),
+            payload: updatedChat,
+          });
+        }
+      });
+
+      // Handle chats updates
+      sock.ev.on('chats.upsert', (newChats: any[]) => {
+        for (const chat of newChats || []) {
+          if (!chat.id || chat.id === 'status@broadcast') continue;
+          const updatedChat = whatsAppStorage.upsertChat(lineId, {
+            jid: chat.id,
+            name: chat.name || chat.id.split('@')[0],
+            unreadCount: chat.unreadCount || 0,
+            updatedAt: new Date().toISOString(),
+          });
+          this.broadcastEvent({
+            type: 'chat_upsert',
+            lineId,
+            timestamp: new Date().toISOString(),
+            payload: updatedChat,
+          });
+        }
+      });
+
+      // Handle initial history sync
+      sock.ev.on('messaging-history.set', ({ chats, messages }: any) => {
+        console.log(`[WhatsAppManager] History sync for line ${lineId}: ${chats?.length || 0} chats, ${messages?.length || 0} messages`);
+        if (chats) {
+          for (const chat of chats) {
+            if (!chat.id || chat.id === 'status@broadcast') continue;
+            whatsAppStorage.upsertChat(lineId, {
+              jid: chat.id,
+              name: chat.name || chat.id.split('@')[0],
+              unreadCount: chat.unreadCount || 0,
+              updatedAt: new Date().toISOString(),
+            });
+          }
+        }
+        if (messages) {
+          for (const msg of messages) {
+            const remoteJid = msg.key?.remoteJid;
+            if (!remoteJid || remoteJid === 'status@broadcast') continue;
+            const text = extractMessageText(msg.message);
+            if (!text) continue;
+
+            const timestamp = msg.messageTimestamp
+              ? new Date(Number(msg.messageTimestamp) * 1000).toISOString()
+              : new Date().toISOString();
+
+            const normalizedMsg: WhatsAppMessage = {
+              id: msg.key.id || `msg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+              lineId,
+              chatJid: remoteJid,
+              fromMe: !!msg.key.fromMe,
+              senderName: msg.pushName || undefined,
+              text,
+              timestamp,
+              status: msg.key.fromMe ? 'sent' : 'delivered',
+            };
+            whatsAppStorage.saveMessage(lineId, normalizedMsg);
+            whatsAppStorage.upsertChat(lineId, {
+              jid: remoteJid,
+              name: msg.pushName || remoteJid.split('@')[0],
+              lastMessage: {
+                text: normalizedMsg.text,
+                timestamp: normalizedMsg.timestamp,
+                fromMe: normalizedMsg.fromMe,
+              },
+              updatedAt: normalizedMsg.timestamp,
+            });
+          }
+        }
       });
 
       return whatsAppStorage.getLineById(lineId) || line;
@@ -365,6 +513,77 @@ export class WhatsAppConnectionManager extends EventEmitter {
     }
 
     return success;
+  }
+
+  public getChats(lineId: string): WhatsAppChat[] {
+    return whatsAppStorage.getChats(lineId);
+  }
+
+  public getMessages(lineId: string, chatJid?: string): WhatsAppMessage[] {
+    return whatsAppStorage.getMessages(lineId, chatJid);
+  }
+
+  public async sendMessage(lineId: string, chatJid: string, text: string): Promise<WhatsAppMessage> {
+    const line = whatsAppStorage.getLineById(lineId);
+    if (!line) {
+      throw new Error(`Linha com ID ${lineId} não encontrada.`);
+    }
+
+    const session = this.activeSessions.get(lineId);
+    if (!session || line.status !== 'connected') {
+      throw new Error(`A linha "${line.name}" não está conectada ao WhatsApp no momento.`);
+    }
+
+    let targetJid = chatJid.trim();
+    if (!targetJid.includes('@')) {
+      targetJid = `${targetJid}@s.whatsapp.net`;
+    }
+
+    const trimmedText = text.trim();
+    if (!trimmedText) {
+      throw new Error('O texto da mensagem não pode ser vazio.');
+    }
+
+    console.log(`[WhatsAppManager] Sending message via line ${line.name} to ${targetJid}: "${trimmedText.slice(0, 30)}..."`);
+    const sent = await session.socket.sendMessage(targetJid, { text: trimmedText });
+
+    const normalizedMsg: WhatsAppMessage = {
+      id: sent?.key?.id || `sent_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      lineId,
+      chatJid: targetJid,
+      fromMe: true,
+      text: trimmedText,
+      timestamp: new Date().toISOString(),
+      status: 'sent',
+    };
+
+    whatsAppStorage.saveMessage(lineId, normalizedMsg);
+
+    const updatedChat = whatsAppStorage.upsertChat(lineId, {
+      jid: targetJid,
+      lastMessage: {
+        text: trimmedText,
+        timestamp: normalizedMsg.timestamp,
+        fromMe: true,
+      },
+      updatedAt: normalizedMsg.timestamp,
+    });
+
+    this.broadcastEvent({
+      type: 'message_upsert',
+      lineId,
+      timestamp: new Date().toISOString(),
+      payload: normalizedMsg,
+    });
+
+    this.broadcastEvent({
+      type: 'chat_upsert',
+      lineId,
+      timestamp: new Date().toISOString(),
+      payload: updatedChat,
+    });
+
+    return normalizedMsg;
   }
 
   private updateStatus(

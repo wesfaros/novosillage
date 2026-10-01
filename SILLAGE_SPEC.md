@@ -23,12 +23,13 @@ Silláge é um CRM Conversacional Comercial com canais interligados, automação
 * **Linha**: Uma conta/número de WhatsApp conectado.
 * **Lista de Transmissão 2.0**: Ação para um Grupo que resulta em mensagens privadas individuais utilizando a infraestrutura operacional de Flows.
 
-## 4. Estado Atual (Etapa 2 — WhatsApp Core Real)
+## 4. Estado Atual (Etapa 3 — WhatsApp Inbox Operacional)
 * Fundação do Shell e Barra de Navegação Central Flutuante mantidas.
 * Infraestrutura REAL do WhatsApp implementada via Baileys Multi-File Auth server-side.
-* Gerenciador centralizado de conexões (`WhatsAppConnectionManager`).
-* Suporte a múltiplas linhas independentes com persistência local de credenciais em disco (`data/sessions/{accountId}`).
-* Emissão de QR Code real criptografado gerado diretamente pelos servidores do WhatsApp Web.
-* Streaming de eventos e estados em tempo real para o frontend via Server-Sent Events (SSE).
-* Distinção rigorosa dos 8 estados de linha sem dados forjados.
-* Desconexão limpa, reconexão controlada com backoff exponencial e exclusão de linha com limpeza de credenciais.
+* Caixa de Entrada (Inbox) integrada e operacional ativada automaticamente quando há linha conectada.
+* Layout operacional limpo de 2 colunas: Lista de Conversas (`ChatList`) à esquerda e Histórico de Mensagens com Envio (`MessageThread` + `MessageInput`) à direita.
+* Envio real de mensagens de texto via Baileys com entrega ao destinatário e atualização imediata.
+* Streaming de novas mensagens e atualizações de conversas via Server-Sent Events (SSE).
+* Suporte à abertura de conversas diretas por telefone (`NewChatModal`).
+* Alternância rápida entre Caixa de Entrada e Gerenciador de Linhas sem perda de contexto.
+* Sem dados falsos (mocks): se não houver conversas, exibe estado limpo de lista vazia.

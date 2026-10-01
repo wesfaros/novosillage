@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { WhatsAppLine } from '../types/whatsapp.js';
+import { WhatsAppLine, WhatsAppChat, WhatsAppMessage } from '../types/whatsapp.js';
 
 const DATA_DIR = path.resolve(process.cwd(), 'data');
 const LINES_FILE = path.join(DATA_DIR, 'whatsapp_lines.json');
@@ -88,6 +88,25 @@ export class WhatsAppStorage {
 
     // Delete session files
     this.deleteSessionDirectory(target.accountId);
+
+    // Delete chats and messages files for this line
+    const chatsFile = path.join(DATA_DIR, `chats_${id}.json`);
+    const messagesFile = path.join(DATA_DIR, `messages_${id}.json`);
+    if (fs.existsSync(chatsFile)) {
+      try {
+        fs.unlinkSync(chatsFile);
+      } catch (e) {
+        // ignore
+      }
+    }
+    if (fs.existsSync(messagesFile)) {
+      try {
+        fs.unlinkSync(messagesFile);
+      } catch (e) {
+        // ignore
+      }
+    }
+
     return true;
   }
 
@@ -109,6 +128,115 @@ export class WhatsAppStorage {
         console.error(`[WhatsAppStorage] Failed to remove session dir for ${accountId}:`, err);
       }
     }
+  }
+
+  // Chats Storage
+  private getChatsFilePath(lineId: string): string {
+    return path.join(DATA_DIR, `chats_${lineId}.json`);
+  }
+
+  public getChats(lineId: string): WhatsAppChat[] {
+    try {
+      const filePath = this.getChatsFilePath(lineId);
+      if (!fs.existsSync(filePath)) {
+        return [];
+      }
+      const content = fs.readFileSync(filePath, 'utf-8');
+      const chats = JSON.parse(content) as WhatsAppChat[];
+      // Sort by updatedAt descending
+      return chats.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    } catch (err) {
+      console.error(`[WhatsAppStorage] Error reading chats for line ${lineId}:`, err);
+      return [];
+    }
+  }
+
+  public upsertChat(lineId: string, chatData: Partial<WhatsAppChat> & { jid: string }): WhatsAppChat {
+    const chats = this.getChats(lineId);
+    const existingIndex = chats.findIndex((c) => c.jid === chatData.jid);
+
+    const now = new Date().toISOString();
+    let updatedChat: WhatsAppChat;
+
+    if (existingIndex >= 0) {
+      updatedChat = {
+        ...chats[existingIndex],
+        ...chatData,
+        updatedAt: chatData.updatedAt || now,
+      };
+      chats[existingIndex] = updatedChat;
+    } else {
+      updatedChat = {
+        id: chatData.jid,
+        lineId,
+        jid: chatData.jid,
+        name: chatData.name || chatData.jid.split('@')[0],
+        isGroup: chatData.isGroup ?? chatData.jid.endsWith('@g.us'),
+        unreadCount: chatData.unreadCount ?? 0,
+        lastMessage: chatData.lastMessage,
+        updatedAt: chatData.updatedAt || now,
+      };
+      chats.push(updatedChat);
+    }
+
+    try {
+      this.ensureDirectories();
+      fs.writeFileSync(this.getChatsFilePath(lineId), JSON.stringify(chats, null, 2), 'utf-8');
+    } catch (err) {
+      console.error(`[WhatsAppStorage] Error writing chats for line ${lineId}:`, err);
+    }
+
+    return updatedChat;
+  }
+
+  // Messages Storage
+  private getMessagesFilePath(lineId: string): string {
+    return path.join(DATA_DIR, `messages_${lineId}.json`);
+  }
+
+  public getMessages(lineId: string, chatJid?: string): WhatsAppMessage[] {
+    try {
+      const filePath = this.getMessagesFilePath(lineId);
+      if (!fs.existsSync(filePath)) {
+        return [];
+      }
+      const content = fs.readFileSync(filePath, 'utf-8');
+      const messages = JSON.parse(content) as WhatsAppMessage[];
+
+      if (chatJid) {
+        return messages
+          .filter((m) => m.chatJid === chatJid)
+          .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      }
+
+      return messages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    } catch (err) {
+      console.error(`[WhatsAppStorage] Error reading messages for line ${lineId}:`, err);
+      return [];
+    }
+  }
+
+  public saveMessage(lineId: string, message: WhatsAppMessage): WhatsAppMessage {
+    const messages = this.getMessages(lineId);
+    const existingIndex = messages.findIndex((m) => m.id === message.id);
+
+    if (existingIndex >= 0) {
+      messages[existingIndex] = {
+        ...messages[existingIndex],
+        ...message,
+      };
+    } else {
+      messages.push(message);
+    }
+
+    try {
+      this.ensureDirectories();
+      fs.writeFileSync(this.getMessagesFilePath(lineId), JSON.stringify(messages, null, 2), 'utf-8');
+    } catch (err) {
+      console.error(`[WhatsAppStorage] Error writing messages for line ${lineId}:`, err);
+    }
+
+    return message;
   }
 
   private writeLines(lines: WhatsAppLine[]): void {
