@@ -1,0 +1,8 @@
+{
+  "name": "SILLAGE",
+  "description": "CRM Conversacional Comercial com navegação flutuante inferior, canais integrados e arquitetura estratégica.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

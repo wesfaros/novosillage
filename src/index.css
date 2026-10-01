@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Sora', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  --color-mare-clara: #A9E6FF;
+  --color-horizonte: #6FCBFF;
+  --color-rastro: #2F8CFF;
+  --color-profundo: #184D9B;
+  --color-nevoa: #F5FAFD;
+  --color-grafite: #162033;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-nevoa);
+  color: var(--color-grafite);
+  overflow-x: hidden;
+}
+
+h1, h2, h3, .font-sora {
+  font-family: var(--font-display);
+}
