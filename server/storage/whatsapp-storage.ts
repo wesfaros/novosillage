@@ -5,6 +5,7 @@ import { WhatsAppLine, WhatsAppChat, WhatsAppMessage } from '../types/whatsapp.j
 const DATA_DIR = path.resolve(process.cwd(), 'data');
 const LINES_FILE = path.join(DATA_DIR, 'whatsapp_lines.json');
 export const SESSIONS_DIR = path.join(DATA_DIR, 'sessions');
+export const MEDIA_DIR = path.join(DATA_DIR, 'media');
 
 export class WhatsAppStorage {
   constructor() {
@@ -17,6 +18,9 @@ export class WhatsAppStorage {
     }
     if (!fs.existsSync(SESSIONS_DIR)) {
       fs.mkdirSync(SESSIONS_DIR, { recursive: true });
+    }
+    if (!fs.existsSync(MEDIA_DIR)) {
+      fs.mkdirSync(MEDIA_DIR, { recursive: true });
     }
     if (!fs.existsSync(LINES_FILE)) {
       fs.writeFileSync(LINES_FILE, JSON.stringify([], null, 2), 'utf-8');
@@ -107,7 +111,25 @@ export class WhatsAppStorage {
       }
     }
 
+    // Delete media files for this line
+    const mediaDir = path.join(MEDIA_DIR, id);
+    if (fs.existsSync(mediaDir)) {
+      try {
+        fs.rmSync(mediaDir, { recursive: true, force: true });
+      } catch (e) {
+        // ignore
+      }
+    }
+
     return true;
+  }
+
+  public getMediaDirectory(lineId: string): string {
+    const mediaDir = path.join(MEDIA_DIR, lineId);
+    if (!fs.existsSync(mediaDir)) {
+      fs.mkdirSync(mediaDir, { recursive: true });
+    }
+    return mediaDir;
   }
 
   public getSessionDirectory(accountId: string): string {
@@ -187,6 +209,27 @@ export class WhatsAppStorage {
     }
 
     return updatedChat;
+  }
+
+  public updateChat(lineId: string, jid: string, fields: Partial<WhatsAppChat>): WhatsAppChat | undefined {
+    const chats = this.getChats(lineId);
+    const index = chats.findIndex((c) => c.jid === jid);
+    if (index === -1) return undefined;
+
+    chats[index] = {
+      ...chats[index],
+      ...fields,
+      updatedAt: fields.updatedAt || new Date().toISOString(),
+    };
+
+    try {
+      this.ensureDirectories();
+      fs.writeFileSync(this.getChatsFilePath(lineId), JSON.stringify(chats, null, 2), 'utf-8');
+    } catch (err) {
+      console.error(`[WhatsAppStorage] Error updating chat ${jid} for line ${lineId}:`, err);
+    }
+
+    return chats[index];
   }
 
   // Messages Storage

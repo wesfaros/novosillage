@@ -156,17 +156,20 @@ export function useWhatsAppChat(lineId?: string) {
             };
             return [updated, ...prev.filter((c) => c.jid !== msg.chatJid)];
           } else {
+            const isGroup = msg.chatJid.endsWith('@g.us') || msg.chatJid.includes('@g.us');
             const newChat: WhatsAppChat = {
               id: msg.chatJid,
               lineId,
               jid: msg.chatJid,
-              name: msg.senderName || msg.chatJid.split('@')[0],
-              isGroup: msg.chatJid.endsWith('@g.us'),
+              name: isGroup ? 'Grupo do WhatsApp' : (msg.senderName || 'Contato do WhatsApp'),
+              isGroup,
+              phoneNumber: isGroup ? undefined : undefined,
               unreadCount: msg.fromMe ? 0 : 1,
               lastMessage: {
                 text: msg.text,
                 timestamp: msg.timestamp,
                 fromMe: msg.fromMe,
+                mediaType: msg.media?.mediaType,
               },
               updatedAt: msg.timestamp,
             };

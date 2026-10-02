@@ -28,6 +28,16 @@ export interface CreateWhatsAppLineDto {
   name: string;
 }
 
+export interface WhatsAppMediaMeta {
+  mediaType: 'image' | 'audio' | 'document' | 'video';
+  mediaUrl: string;
+  fileName?: string;
+  fileSize?: number;
+  mimeType?: string;
+  caption?: string;
+  isPtt?: boolean;
+}
+
 export interface WhatsAppChat {
   id: string; // remoteJid
   lineId: string;
@@ -35,10 +45,13 @@ export interface WhatsAppChat {
   name: string;
   isGroup: boolean;
   unreadCount: number;
+  profilePictureUrl?: string;
+  phoneNumber?: string;
   lastMessage?: {
     text: string;
     timestamp: string;
     fromMe: boolean;
+    mediaType?: string;
   };
   updatedAt: string;
 }
@@ -54,6 +67,7 @@ export interface WhatsAppMessage {
   text: string;
   timestamp: string;
   status: WhatsAppMessageStatus;
+  media?: WhatsAppMediaMeta;
 }
 
 export interface WhatsAppServerEvent {

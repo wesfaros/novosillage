@@ -7,6 +7,7 @@ import { ConnectLineModal } from '../components/whatsapp/ConnectLineModal';
 import { ChatList } from '../components/whatsapp/ChatList';
 import { MessageThread } from '../components/whatsapp/MessageThread';
 import { NewChatModal } from '../components/whatsapp/NewChatModal';
+import { formatPhoneNumber } from '../utils/phone';
 import {
   MessageSquare,
   Plus,
@@ -145,7 +146,7 @@ export const WhatsAppPage: React.FC<WhatsAppPageProps> = () => {
   const isInboxView = hasConnectedLine && viewMode === 'inbox';
 
   return (
-    <div className="w-full h-full flex flex-col space-y-4">
+    <div className="w-full flex flex-col space-y-3 pb-28 md:pb-32">
       
       {/* Top Operational Status Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/80">
@@ -170,8 +171,8 @@ export const WhatsAppPage: React.FC<WhatsAppPageProps> = () => {
                 <span>Operando com:</span>
                 <strong className="text-[#162033] font-medium">{activeConnectedLine.name}</strong>
                 {activeConnectedLine.phoneNumber && (
-                  <span className="font-mono text-slate-400">
-                    (+{activeConnectedLine.phoneNumber})
+                  <span className="text-slate-400">
+                    ({formatPhoneNumber(activeConnectedLine.phoneNumber)})
                   </span>
                 )}
               </p>
@@ -191,7 +192,7 @@ export const WhatsAppPage: React.FC<WhatsAppPageProps> = () => {
               >
                 {connectedLines.map((line) => (
                   <option key={line.id} value={line.id}>
-                    {line.name} {line.phoneNumber ? `(+${line.phoneNumber})` : ''}
+                    {line.name} {line.phoneNumber ? `(${formatPhoneNumber(line.phoneNumber)})` : ''}
                   </option>
                 ))}
               </select>
@@ -260,7 +261,7 @@ export const WhatsAppPage: React.FC<WhatsAppPageProps> = () => {
       {/* Main View Area */}
       {isInboxView ? (
         /* ================= INBOX VIEW ================= */
-        <div className="w-full flex-1 min-h-[580px] h-[calc(100vh-210px)] max-h-[850px] bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden flex flex-col md:flex-row">
+        <div className="w-full h-[calc(100vh-285px)] min-h-[440px] max-h-[700px] mb-8 bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden flex flex-col md:flex-row">
           <ChatList
             chats={chats}
             selectedChatId={selectedChat?.jid}

@@ -1,6 +1,18 @@
 import React, { useState } from 'react';
 import { WhatsAppChat } from '../../types/whatsapp';
-import { Search, Plus, User, Users, MessageSquare, Check, CheckCheck } from 'lucide-react';
+import { getCleanDisplayName, formatPhoneNumber, isGroupJid } from '../../utils/phone';
+import {
+  Search,
+  Plus,
+  User,
+  Users,
+  MessageSquare,
+  CheckCheck,
+  Camera,
+  Mic,
+  FileText,
+  Video,
+} from 'lucide-react';
 
 interface ChatListProps {
   chats: WhatsAppChat[];
@@ -9,6 +21,40 @@ interface ChatListProps {
   onOpenNewChatModal: () => void;
   isLoading: boolean;
 }
+
+// Avatar component with graceful fallback to Users / User icon
+const ChatAvatar: React.FC<{ chat: WhatsAppChat; displayName: string; isSelected: boolean }> = ({
+  chat,
+  displayName,
+  isSelected,
+}) => {
+  const [imgFailed, setImgFailed] = useState(false);
+  const isGroup = !!chat.isGroup || isGroupJid(chat.jid);
+
+  if (chat.profilePictureUrl && !imgFailed) {
+    return (
+      <img
+        src={chat.profilePictureUrl}
+        alt={displayName}
+        className="w-10 h-10 rounded-full object-cover shrink-0 border border-slate-200"
+        referrerPolicy="no-referrer"
+        onError={() => setImgFailed(true)}
+      />
+    );
+  }
+
+  return (
+    <div
+      className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-xs font-medium ${
+        isSelected
+          ? 'bg-[#184D9B] text-white'
+          : 'bg-slate-100 text-slate-600 border border-slate-200/60'
+      }`}
+    >
+      {isGroup ? <Users className="w-4 h-4" /> : <User className="w-4 h-4" />}
+    </div>
+  );
+};
 
 export const ChatList: React.FC<ChatListProps> = ({
   chats,
@@ -22,9 +68,11 @@ export const ChatList: React.FC<ChatListProps> = ({
   const filteredChats = chats.filter((c) => {
     const q = searchQuery.toLowerCase().trim();
     if (!q) return true;
+    const displayName = getCleanDisplayName(c).toLowerCase();
+    const phone = c.phoneNumber || formatPhoneNumber(c.jid);
     return (
-      c.name.toLowerCase().includes(q) ||
-      c.jid.toLowerCase().includes(q) ||
+      displayName.includes(q) ||
+      phone.includes(q) ||
       (c.lastMessage?.text && c.lastMessage.text.toLowerCase().includes(q))
     );
   });
@@ -48,8 +96,23 @@ export const ChatList: React.FC<ChatListProps> = ({
     }
   };
 
+  const renderMediaIcon = (mediaType?: string) => {
+    switch (mediaType) {
+      case 'image':
+        return <Camera className="w-3 h-3 text-[#2F8CFF] shrink-0" />;
+      case 'audio':
+        return <Mic className="w-3 h-3 text-emerald-600 shrink-0" />;
+      case 'document':
+        return <FileText className="w-3 h-3 text-amber-600 shrink-0" />;
+      case 'video':
+        return <Video className="w-3 h-3 text-indigo-600 shrink-0" />;
+      default:
+        return null;
+    }
+  };
+
   return (
-    <div className="w-full md:w-80 lg:w-96 flex flex-col h-full bg-white border-r border-slate-200/80 shrink-0">
+    <div className="w-full md:w-80 lg:w-96 flex flex-col h-full bg-white border-r border-slate-200/80 shrink-0 select-none">
       
       {/* Search & Actions Header */}
       <div className="p-3 border-b border-slate-100 space-y-2">
@@ -112,7 +175,8 @@ export const ChatList: React.FC<ChatListProps> = ({
         ) : (
           filteredChats.map((chat) => {
             const isSelected = selectedChatId === chat.jid;
-            const phoneDigits = chat.jid.split('@')[0];
+            const displayName = getCleanDisplayName(chat);
+            const isGroup = !!chat.isGroup || isGroupJid(chat.jid);
 
             return (
               <button
@@ -124,26 +188,18 @@ export const ChatList: React.FC<ChatListProps> = ({
                     : 'hover:bg-slate-50/80 bg-white'
                 }`}
               >
-                {/* Contact Avatar */}
-                <div
-                  className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-xs font-medium ${
-                    isSelected
-                      ? 'bg-[#184D9B] text-white'
-                      : 'bg-slate-100 text-slate-600'
-                  }`}
-                >
-                  {chat.isGroup ? (
-                    <Users className="w-4 h-4" />
-                  ) : (
-                    <User className="w-4 h-4" />
-                  )}
-                </div>
+                {/* Profile Picture / Avatar */}
+                <ChatAvatar
+                  chat={chat}
+                  displayName={displayName}
+                  isSelected={isSelected}
+                />
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-1 mb-0.5">
                     <span className="text-xs font-semibold text-[#162033] font-sora truncate">
-                      {chat.name || `+${phoneDigits}`}
+                      {displayName}
                     </span>
                     <span className="text-[10px] text-slate-400 shrink-0 font-mono">
                       {formatTimestamp(chat.lastMessage?.timestamp || chat.updatedAt)}
@@ -155,8 +211,9 @@ export const ChatList: React.FC<ChatListProps> = ({
                       {chat.lastMessage?.fromMe && (
                         <CheckCheck className="w-3 h-3 text-[#2F8CFF] shrink-0" />
                       )}
+                      {renderMediaIcon(chat.lastMessage?.mediaType)}
                       <span className="truncate">
-                        {chat.lastMessage?.text || `+${phoneDigits}`}
+                        {chat.lastMessage?.text || (isGroup ? 'Grupo do WhatsApp' : 'Mensagem')}
                       </span>
                     </p>
 

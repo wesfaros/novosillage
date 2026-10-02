@@ -1,5 +1,22 @@
 # SILLÁGE — Changelog de Desenvolvimento
 
+## [0.4.0] - Estabilização da Caixa de Entrada: Identidade de Grupos, Layout e Recepção de Mídia
+
+### Corrigido
+- **Identidade e Metadados de Grupos e Contatos (`server/services/whatsapp-manager.ts`, `src/utils/phone.ts`)**:
+  - Distinção rigorosa entre chats individuais e grupos (`isGroupJid`, `isJidGroup`, detecção de hashes e LIDs).
+  - Grupos nunca mais são nomeados com o `pushName` do participante que enviou mensagem recente.
+  - Sincronização inicial de grupos via `sock.groupFetchAllParticipating()` e cache resiliente de assuntos de grupos (`groupMetadata`).
+  - Ocultação completa de identificadores numéricos técnicos (JIDs numéricos como `120363...` e LIDs como `23181...`). Se o contato não tem nome salvo, exibe o telefone formatado ou "Contato do WhatsApp" / "Grupo do WhatsApp".
+  - Busca de fotos de perfil reais (`profilePictureUrl`) com suporte a fallback de imagem/preview e proxy estático `/api/whatsapp/lines/:lineId/avatar/:chatJid`.
+- **Correção de Sobreposição de Layout (`src/pages/WhatsAppPage.tsx`, `src/components/whatsapp/MessageThread.tsx`)**:
+  - Ajuste de dimensões do container da Caixa de Entrada (`h-[calc(100vh-285px)] min-h-[440px] max-h-[700px] mb-8` e `pb-28 md:pb-32`).
+  - A caixa de digitação (`MessageInput`) e a última mensagem do histórico agora repousam com margem segura (~110px) estritamente ACIMA da `FloatingBottomBar`, garantindo usabilidade total sem qualquer vazamento sob o menu inferior.
+- **Recepção e Renderização de Mídia via Baileys (`server/services/whatsapp-manager.ts`, `server/routes/whatsapp-routes.ts`, `src/components/whatsapp/MessageThread.tsx`)**:
+  - Download em tempo real de mídias (`imageMessage`, `audioMessage` [incluindo notas de voz PTT], `documentMessage`, `videoMessage`) através de `downloadMediaMessage` com suporte a mensagens desembrulhadas (`ephemeralMessage`, `viewOnceMessage`).
+  - Armazenamento em disco em `/data/media/{lineId}/` e exposição de rota REST (`/api/whatsapp/lines/:lineId/media/:filename`) com cabeçalhos adequados (`Content-Type`, `Accept-Ranges: bytes`, `Cache-Control`).
+  - Renderização na interface com player nativo de áudio (`<audio controls>`), exibição de fotos com lazy loading e modal/link em tamanho real, e download de documentos com nome e tamanho de arquivo.
+
 ## [0.3.0] - Etapa 3: Caixa de Entrada (Inbox) Operacional do WhatsApp
 
 ### Adicionado

@@ -1,5 +1,8 @@
 import { Router, Request, Response } from 'express';
+import path from 'path';
+import fs from 'fs';
 import { whatsAppManager } from '../services/whatsapp-manager.js';
+import { whatsAppStorage } from '../storage/whatsapp-storage.js';
 import { WhatsAppServerEvent } from '../types/whatsapp.js';
 
 export const whatsAppRouter = Router();
@@ -131,6 +134,67 @@ whatsAppRouter.post('/lines/:lineId/chats', async (req: Request, res: Response) 
     res.status(201).json({ success: true, data: chat });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// GET media file
+whatsAppRouter.get('/lines/:lineId/media/:filename', (req: Request, res: Response) => {
+  try {
+    const { lineId, filename } = req.params;
+    const safeFilename = path.basename(filename);
+    const mediaDir = whatsAppStorage.getMediaDirectory(lineId);
+    const filePath = path.join(mediaDir, safeFilename);
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ success: false, error: 'Arquivo de mídia não encontrado.' });
+    }
+
+    const ext = path.extname(safeFilename).toLowerCase();
+    if (ext === '.ogg') {
+      res.setHeader('Content-Type', 'audio/ogg; codecs=opus');
+    } else if (ext === '.mp3') {
+      res.setHeader('Content-Type', 'audio/mpeg');
+    } else if (ext === '.m4a') {
+      res.setHeader('Content-Type', 'audio/mp4');
+    } else if (ext === '.jpg' || ext === '.jpeg') {
+      res.setHeader('Content-Type', 'image/jpeg');
+    } else if (ext === '.png') {
+      res.setHeader('Content-Type', 'image/png');
+    } else if (ext === '.webp') {
+      res.setHeader('Content-Type', 'image/webp');
+    } else if (ext === '.mp4') {
+      res.setHeader('Content-Type', 'video/mp4');
+    } else if (ext === '.pdf') {
+      res.setHeader('Content-Type', 'application/pdf');
+    }
+
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.sendFile(filePath);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET avatar proxy
+whatsAppRouter.get('/lines/:lineId/avatar/:chatJid', async (req: Request, res: Response) => {
+  try {
+    const { lineId, chatJid } = req.params;
+    const url = await whatsAppManager.getProfilePic(lineId, chatJid);
+    if (!url) {
+      return res.status(404).send('Avatar não disponível.');
+    }
+    const fetchRes = await fetch(url);
+    if (!fetchRes.ok) {
+      return res.redirect(url);
+    }
+    const contentType = fetchRes.headers.get('content-type') || 'image/jpeg';
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    const buffer = Buffer.from(await fetchRes.arrayBuffer());
+    res.send(buffer);
+  } catch (err: any) {
+    res.status(404).send('Avatar não disponível.');
   }
 });
 
